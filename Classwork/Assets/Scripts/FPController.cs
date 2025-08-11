@@ -1,3 +1,4 @@
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering; //needed for all input in new input system
@@ -23,8 +24,13 @@ public class FPController : MonoBehaviour
     public float crouchSpeed = 2.5f;
     private float originalMoveSpeed;
 
+    [Header("PickUp")]
+    public float pickupRange = 3f;
+    public Transform holdPoint;
+    private PickUpObject heldObject;
+
     private CharacterController controller;
-    private Vector2 moveInput; 
+    private Vector2 moveInput;
     private Vector2 lookInput;
     private Vector3 velocity;
     private float verticalRotation = 0f;
@@ -39,6 +45,11 @@ public class FPController : MonoBehaviour
     {
         HandleMovement();
         HandleLook();
+
+        if (heldObject != null)
+        {
+            heldObject.MoveToHoldPoint(holdPoint.position);
+        }
     }
     public void OnMovement(InputAction.CallbackContext context)
     {
@@ -87,7 +98,7 @@ public class FPController : MonoBehaviour
 
     private void Shoot()
     {
-        GameObject bullet = Instantiate(bulletPrefab,gunPoint.position, gunPoint.rotation);
+        GameObject bullet = Instantiate(bulletPrefab, gunPoint.position, gunPoint.rotation);
         Rigidbody rb = bullet.GetComponent<Rigidbody>();
 
         if (rb != null)
@@ -108,6 +119,30 @@ public class FPController : MonoBehaviour
         {
             controller.height = standHeight;
             moveSpeed = originalMoveSpeed;
+        }
+    }
+
+    public void OnPickUp(InputAction.CallbackContext context)
+    {
+        if (!context.performed) return;
+
+        if (heldObject == null)
+        {
+            Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
+            if (Physics.Raycast(ray, out RaycastHit hit, pickupRange))
+            {
+                PickUpObject pickUp = hit.collider.GetComponent<PickUpObject>();
+                if (pickUp != null)
+                {
+                    pickUp.PickUp(holdPoint);
+                    heldObject = pickUp;
+                }
+            }
+        }
+        else
+        {
+            heldObject.Drop();
+            heldObject = null;
         }
     }
 }
